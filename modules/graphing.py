@@ -21,17 +21,19 @@ import cor13
 
 # n is number of nodes in graph!
 # https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html
-def collapse_plt(x_list, n, N, x_bar): #take x-Bar out
+def collapse_plt(x_list, n, N):
     x_axis = x_list.copy()
     for i in range(N+1):
         x_axis[i] = np.concatenate(x_axis[i])
         # np.append(x_axis[i], x_bar)
     for i in range (n):
         plt.plot(range(N+1), [x_axis[f][i] for f in range(N+1)], linewidth=3)
-    dummy = np.full((N+1,1), xbar)
-    # plt.plot(range(N+1), dummy, 'b--', linewidth=4)
+    plt.xlabel('Iteration number, $k$', fontsize=15)
+    plt.ylabel('Node values, $x_i$', fontsize=15)
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
 
-def error_plt(errors, G, blks, sol, rate='arbi'):
+def error_plt(errors, G, blks, sol, N, rate='arbi'):
     if rate == 'cliques':
         r = rate_cliques(G, blks)
         #blabel = r'Predicted Bound in Cor 1.3, $(1-\frac{r\alpha(G)}{4K})^k||c-c^*||^2$'
@@ -58,4 +60,8 @@ def error_plt(errors, G, blks, sol, rate='arbi'):
     plt.semilogy(range(np.shape(errors)[0]),err, 'b', linewidth=4, label = r'Block RK')
     plt.semilogy(range(np.shape(bound)[0]), bound, 'r--', linewidth=4, label = blabel)
     plt.legend(prop={'size': 15})
+    plt.xlabel('Iteration number, $k$', fontsize=15)
+    plt.ylabel(r'$||c_k-c*||^2$', fontsize=15)
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
     return bound
