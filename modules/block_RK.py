@@ -200,7 +200,7 @@ def collapse_plt(x_list, n, N):
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
 
-def error_plt(errors, G, blks, sol, rate='arbi'):
+def error_plt(errors, G, blks, sol, N, rate='arbi'):
     if rate == 'cliques':
         r = rate_cliques(G, blks)
         #blabel = r'Predicted Bound in Cor 1.3, $(1-\frac{r\alpha(G)}{4K})^k||c-c^*||^2$'
@@ -221,17 +221,16 @@ def error_plt(errors, G, blks, sol, rate='arbi'):
         print('rate not supported, using arbitrary blk rate')
         r = rate_arbi(G, blks)
     blabel = r'Predicted Bound'
-    #bound = np.full((N+1), (r**i)*(errors[0]**2))
-    bound = [(r**i)*(errors[0]**2) for i in range(N+1)]
+    bound = [(r**i)*(errors[0]**2) for i in range(N)]
     err = [errors[i]**2 for i in range(len(errors))]
-    plt.semilogy(range(np.shape(errors)[0]),err, 'b', linewidth=4, label = r'Block RK')
-    plt.semilogy(range(np.shape(bound)[0]), bound, 'r--', linewidth=4, label = blabel)
+    plt.semilogy(range(N),err[0:N], 'b', linewidth=4, label = r'Block RK')
+    plt.semilogy(range(N), bound, 'r--', linewidth=4, label = blabel)
     plt.legend(prop={'size': 15})
     plt.xlabel('Iteration number, $k$', fontsize=15)
     plt.ylabel(r'$||c_k-c*||^2$', fontsize=15)
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
-    return bound
+    return bound, r, err
 
 
 # Wraps helper functions and applies them to specific conditions
@@ -288,8 +287,8 @@ def clique_edge_cover(G, A, bound=None):
     cliques_list = []
     while len(H.edges)>0:
         foo = largest_clique_bounded(list(find_cliques(H)), bound)
-        H.remove_nodes_from(foo)
         foo = edges_from_pnts(foo)
+        H.remove_edges_from(foo)
         cliques_list.append(foo)
         # H.remove_edges_from(foo)
         # remove nodes or edges? remove edges only!
