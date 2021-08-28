@@ -361,3 +361,13 @@ def blockRK_path(A, G, sol, b, N, c, l):
         errors.append(np.linalg.norm(x-sol))
         x_list.append(np.asarray(x))
     return paths, x, x_list, errors
+
+def random_blocks(A, s, bn):
+    n = A.shape[0]
+    blocks = []
+    i = 0
+    while i in range(bn):
+        random_indices = np.random.choice(n, size=s, replace=False)
+        blocks.append(list(random_indices))
+        i = i + 1
+    return blocks
