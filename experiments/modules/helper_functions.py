@@ -16,14 +16,24 @@ from collections import Counter
 
 
 # Helper functions for grabbing row indices for subgraphs
+def indice_ex(G, e):
+    pos1 = list(locate(G.nodes, lambda x: x == e[0]))[0]
+    pos2 = list(locate(G.nodes, lambda x: x == e[1]))[0]
+    return (pos1, pos2)
 
 # Converts sets of edges into row indices in the incidence matrix
-def find_subgraph_from_edges(A,edges):
+def find_subgraph_from_edges(G, A, edges, type='normal'):
     edge_indices = []
-    for edge in edges:
-        for i in range(A.shape[0]):
-            if A[i,edge[0]] != 0 and A[i,edge[1]] != 0:
+    if type == 'grid':
+        for edge in edges:
+            foo = indice_ex(G, edge)
+            if A[i,foo[0]] != 0 and A[i,foo[1]] != 0:
                 edge_indices.append(i)
+    else:
+        for edge in edges:
+            for i in range(A.shape[0]):
+                if A[i,edge[0]] != 0 and A[i,edge[1]] != 0:
+                    edge_indices.append(i)
     if len(edges) != len(edge_indices):
         print("Did not find all edges of subgraph in incidence matrix.")
     return edge_indices

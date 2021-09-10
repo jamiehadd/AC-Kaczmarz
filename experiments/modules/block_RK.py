@@ -14,6 +14,9 @@ from networkx.linalg.algebraicconnectivity import algebraic_connectivity
 from scipy import stats
 import itertools as it
 from collections import Counter
+from networkx.generators.lattice import grid_graph
+from more_itertools import locate
+
 
 # Standard Block RK
 # x_list allows us to track evolution of x and its individual components (for "collapse" graph?)
