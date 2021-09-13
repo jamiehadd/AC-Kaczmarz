@@ -117,7 +117,7 @@ def blocks_pnts(A, subgraphs):
     return blocks
 
 # Given a list of edges, returns a list of corresponding rows in incidence matrix
-def blocks_edge(A, subgraphs):
+def blocks_edge(G, A, subgraphs):
     blocks = []
     for subgraph in subgraphs:
         blocks.append(find_subgraph_from_edges(G, A, subgraph))
