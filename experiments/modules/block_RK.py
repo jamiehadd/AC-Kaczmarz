@@ -326,8 +326,7 @@ def clique_edge_cover(G, A, bound=None):
         foo = edges_from_pnts(foo)
         H.remove_edges_from(foo)
         cliques_list.append(foo)
-        # H.remove_edges_from(foo)
-        # remove nodes or edges? remove edges only!
+        print('clique found, adding to list...')
     cliques_list = blocks_edge(A, cliques_list)
     return cliques_list
 
