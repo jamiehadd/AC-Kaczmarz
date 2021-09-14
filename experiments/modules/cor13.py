@@ -26,14 +26,11 @@ def eigenvalue(blk, A):
     maxeig = np.max(eigs[np.nonzero(eigs)])
     return mineig, maxeig
 
-def alpha(blks, A):
-    alpha = 0
-    beta = 100000
-    for blk in blks:
-        if eigenvalue(blk, A)[0] < mineigs:
-            alpha = eigenvalue(blk, A)[0]
-        if eigenvalue(blk, A)[1] > maxeigs:
-            beta = eigenvalue(blk, A)[1]
+def alpha(blks,A):
+    min_foo = [eigenvalue(blk, A)[0] for blk in blks]
+    max_foo = [eigenvalue(blk, A)[1] for blk in blks]
+    alpha = np.min(min_foo)
+    beta = np.max(max_foo)
     return alpha, beta
 
 def rR(blks):

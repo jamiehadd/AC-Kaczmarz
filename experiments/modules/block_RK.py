@@ -56,38 +56,47 @@ def blockRK_RLF(A, sol, b, blocks, N, c, p=0.3):
         x_list.append(x)
     return x, x_list, errors
 
-# Corrupted block RK with one-off random additive noise (Gaussian)
-# Adds a Gaussian noise vector to b at first
+# Corrupted block RK with Constant Edge Communication Error
+# Where a constant error vector is added to b according to some specified probability (bernoulli dist.)
 
-def blockRK_AGN(A, sol, b, blocks, N, c, s=0.05, m=0):
+def blockRK_cece(A, sol, b, blocks, N, c, err, p=0.2): # where err is a constant vector
     k = len(blocks)
     x = c
-    errors = []
     x_list = [x]
-    err = normal(m, s, b.shape)
-    b = b + err
-    for j in range (1, N+1):
-        x = x + np.linalg.pinv(A[blocks[i],:])@(b[blocks[i]] - A[blocks[i],:]@x) + err
-    errors.append(np.linalg.norm(x-sol))
-    x_list.append(x)
-    return x, x_list, errors
-
-# Corrupted block RK with two modes of failure: ONE-OFF additive gaussian noise and
-# random link failure
-
-def blockRK_cor(A, sol, b, blocks, N, c, p=0.3, m=0, s=0.1):
-    k = len(blocks)
-    x = c
     errors = []
-    x_list = []
-    err = normal(m, s, b.shape)
-    b = b + err
-    for j in range (1, N+1):
-        r = stats.bernoulli.rvs(p, size = 1);
+    m_t = b
+    for j in range(1, N+1):
+        r = stats.bernoulli.rvs(p, size = 1)
         i = randint(k)
         if r[0] == 1:
-            x = x + np.linalg.pinv(A[blocks[i],:])@(b[blocks[i]] - A[blocks[i],:]@x)
-            errors.append(np.linalg.norm(x-sol))
+            m_t = b + err
+        else:
+            m_t = b
+        x = x + np.linalg.pinv(A[blocks[i],:])@(b[blocks[i]] - A[blocks[i],:]@x)
+        errors.append(np.linalg.norm(x-sol))
+        x_list.append(x)
+    return x, x_list, errors
+
+# Corrupted block RK with Varying Edge Communication Error
+
+def blockRK_vece(A, sol, b, blocks, N, c, err, p=0.2): # where err is a distribution of possible error values
+    k = len(blocks)
+    x = c
+    x_list = [x]
+    errors = []
+    m_t = b
+    for j in range(1, N+1):
+        r = stats.bernoulli.rvs(p, size = 1)
+        i = randint(k)
+        if r[0] == 1:
+            y = err.shape[1]
+            t = randint(y)
+            m_t = b + err[t]
+        else:
+            m_t = b
+        x = x + np.linalg.pinv(A[blocks[i],:])@(b[blocks[i]] - A[blocks[i],:]@x)
+        errors.append(np.linalg.norm(x-sol))
+        x_list.append(x)
     return x, x_list, errors
 
 # Helper functions for grabbing row indices for subgraphs
@@ -137,14 +146,11 @@ def eigenvalue(blk, A):
     maxeig = np.max(eigs[np.nonzero(eigs)])
     return mineig, maxeig
 
-def alpha(blks, A):
-    alpha = 0
-    beta = 100000
-    for blk in blks:
-        if eigenvalue(blk, A)[0] < mineigs:
-            alpha = eigenvalue(blk, A)[0]
-        if eigenvalue(blk, A)[1] > maxeigs:
-            beta = eigenvalue(blk, A)[1]
+def alpha(blks,A):
+    min_foo = [eigenvalue(blk, A)[0] for blk in blks]
+    max_foo = [eigenvalue(blk, A)[1] for blk in blks]
+    alpha = np.min(min_foo)
+    beta = np.max(max_foo)
     return alpha, beta
 
 def rR(blks):
@@ -186,6 +192,12 @@ def rate_arbi(G, blks):
     bound = 1-rR(blks)[0]*algebraic_connectivity(G)/(M*k)
     return bound
 
+def sigma(errs):
+    # turns list of lists into array retrieves covariance matrix
+    mat = np.array(errs)
+    sig = np.cov(errs)
+    return sig
+
 # Two main graphs: Collapse Plot (Individual node values over iteration)
 # and Error Plot (Error over iteration with appropriate bound)
 
@@ -206,19 +218,15 @@ def collapse_plt(x_list, n, N):
 def error_plt(errors, G, blks, sol, N, rate='arbi'):
     if rate == 'cliques':
         r = rate_cliques(G, blks)
-        #blabel = r'Predicted Bound in Cor 1.3, $(1-\frac{r\alpha(G)}{4K})^k||c-c^*||^2$'
         label = 'Block Gossip (Cliques)'
     elif rate == 'ies':
         r = rate_ies(G,blks)
-        #blabel =  r'Predicted Bound in Cor 1.3, $(1-\frac{r\alpha(G)}{2K})^k||c-c^*||^2$'
         label = 'Block Gossip (Independent Edge Sets)'
     elif rate == 'path':
         r = rate_paths(G, blks)
-        #blabel = r'Predicted Bound in Cor 1.3, $(1-\frac{r\alpha(G)}{4K})^k||c-c^*||^2$'
         label = 'Block Gossip (Paths)'
     elif rate == 'arbi':
         r = rate_arbi(G, blks)
-        #blabel = r'Predicted Bound in Cor 1.3, $(1-\frac{r\alpha(G)}{MK})^k||c-c^*||^2$'
         label = 'Block Gossip'
     else:
         print('rate not supported, using arbitrary blk rate')
@@ -226,7 +234,7 @@ def error_plt(errors, G, blks, sol, N, rate='arbi'):
     blabel = r'Predicted Bound'
     bound = [(r**i)*(errors[0]**2) for i in range(N)]
     err = [errors[i]**2 for i in range(len(errors))]
-    plt.semilogy(range(N),err[0:N], 'b', linewidth=4, label = r'Block RK')
+    plt.semilogy(range(N),err[0:N], 'b', linewidth=4, label = label)
     plt.semilogy(range(N), bound, 'r--', linewidth=4, label = blabel)
     plt.legend(prop={'size': 15})
     plt.xlabel('Iteration number, $k$', fontsize=15)
@@ -235,6 +243,31 @@ def error_plt(errors, G, blks, sol, N, rate='arbi'):
     plt.yticks(fontsize=15)
     return bound, r, err
 
+def error_plt_ece(errors, A, G, blks, sol, N, err, t):
+    k = len(blks)
+    alp = alpha(blks, A)[0]
+    beta = alpha(blks, A)[1]
+    r = rR(blks)[0]
+    R = rR(blks)[1]
+    rate = 1-(r*algebraic_connectivity(G)/(beta*k))
+    if t == 'cece' or 'CECE' or 'constant':
+        mc = beta*R/(alp*r*algebraic_connectivity(G))*np.linalg.norm(err)
+        label = r'Block Gossip (CECE)'
+    elif t == 'vece' or 'VECE' or 'random' or 'varying':
+        mc = beta*R/(alp*r*algebraic_connectivity(G))*np.trace(sigma(err))
+        label = r'Block Gossip (VECE)'
+    else:
+        mc = 0
+    bound = [(rate**i)*(errors[0]**2)+mc for i in range(N+1)]
+    err = [errors[i]**2 for i in range(len(errors))]
+    plt.semilogy(range(np.shape(errors)[0]),err, 'b', linewidth=4, label = label)
+    plt.semilogy(range(np.shape(bound)[0]), bound, 'r--', linewidth=4, label = r'Predicted Bound')
+    plt.legend(prop={'size': 15})
+    plt.xlabel('Iteration number, $k$', fontsize=15)
+    plt.ylabel(r'$||c_k-c*||^2$', fontsize=15)
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
+    return bound
 
 # Wraps helper functions and applies them to specific conditions
 
@@ -317,32 +350,25 @@ def clique_node_cover(G, A, bound=None):
 # helper functions for path selection
 # path with no restrictions except length
 # if a path terminates before the length, the short path is returned
+def find_edge(G, r):
+    neighbors = [n for n in G.neighbors(r)]
+    if len(neighbors)==1:
+        print("no more neighbors found, terminating")
+        return
+    else:
+        a = neighbors[np.random.randint(0, len(neighbors))]
+        return a
+
 def find_path(G, r, l):
     path = [r]
-    path.append(find_edge(G, r, -1))
     while len(path)<l:
-        path.append(find_edge(G, path[len(path)-1], path[len(path)-2]))
+        nb = find_edge(G, path[len(path)-1])
+        while nb in path:
+            nb = find_edge(G, path[len(path)-1])
+        if nb == 'null':
+            return path
+        path.append(nb)
     return path
-
-def find_edge(G, r, e=-1):
-    # e = previous node (so we don't choose consecutive repeating edges)
-    if e != -1: # no previous node
-        neighbors = [n for n in G.neighbors(r)]
-        if len(neighbors)==0:
-            print("no neighbors found, isolated point")
-            return
-        else:
-            a = neighbors[np.random.randint(0, len(neighbors)-1)]
-            return a
-    else:
-        neighbors = [n for n in G.neighbors(r)]
-        neighbors = list(filter(lambda x: x!=e, neighbors))
-        if len(neighbors)<=1:
-            print("no neighbors found, path terminates here")
-            return
-        else:
-            a = neighbors[np.random.randint(0, len(neighbors)-1)]
-            return a
 
 def path_blk(A, G, r, l):
     path = find_path(G, r, l)
