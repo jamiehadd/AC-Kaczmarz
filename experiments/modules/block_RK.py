@@ -16,6 +16,10 @@ import itertools as it
 from collections import Counter
 from networkx.generators.lattice import grid_graph
 from more_itertools import locate
+from ipywidgets import IntProgress
+from IPython.display import display
+import time
+
 
 
 # Standard Block RK
@@ -321,12 +325,16 @@ def largest_clique_bounded(cliques, bound):
 def clique_edge_cover(G, A, bound=None):
     H = G.copy()
     cliques_list = []
+    max_count = 5000
+    f = IntProgress(min=0, max=max_count)
+    display(f)
     while len(H.edges)>0:
         foo = largest_clique_bounded(list(find_cliques(H)), bound)
         foo = edges_from_pnts(foo)
         H.remove_edges_from(foo)
         cliques_list.append(foo)
-        print('clique found, adding to list...')
+        f.value += 1
+    f.value = 100 # signals end of run
     cliques_list = blocks_edge(A, cliques_list)
     return cliques_list
 
