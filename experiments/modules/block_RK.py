@@ -334,7 +334,7 @@ def clique_edge_cover(G, A, bound=None):
         H.remove_edges_from(foo)
         cliques_list.append(foo)
         f.value += 1
-    f.value = 100 # signals end of run
+    f.value = max_count # signals end of run
     cliques_list = blocks_edge(A, cliques_list)
     return cliques_list
 
@@ -389,6 +389,9 @@ def blockRK_path(A, G, sol, b, N, c, l):
     x_list = [x]
     errors = [np.linalg.norm(x-sol)]
     paths = []
+    max_count = N+1
+    f = IntProgress(min=0, max=max_count)
+    display(f)
     for j in range(1, N+1):
         r = randint(len(G.nodes))
         blk = path_blk(A, G, r, l)
@@ -396,6 +399,8 @@ def blockRK_path(A, G, sol, b, N, c, l):
         x = x + np.linalg.pinv(A[blk,:])@(b[blk] - A[blk,:]@x)
         errors.append(np.linalg.norm(x-sol))
         x_list.append(np.asarray(x))
+        f.value += 1
+    f.value = max_count
     return paths, x, x_list, errors
 
 def random_blocks(A, s, bn):
