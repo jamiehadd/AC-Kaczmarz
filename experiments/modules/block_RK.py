@@ -37,27 +37,8 @@ def blockRK(A, sol, b, blocks, N, c):
     for j in range (1, N+1):
         i = randint(k);
         x = x + np.linalg.pinv(A[blocks[i],:])@(b[blocks[i]] - A[blocks[i],:]@x)
-        errors.append(np.linalg.norm(x-sol))
+        errors.append(np.linalg.norm(x-sol)**2)
         x_list.append(np.asarray(x))
-    return x, x_list, errors
-
-# Corrupted block RK with random link failure (RLF)
-# Fails on each block randomly from a normal distribution
-# Independent but not identical probability of failure
-# Accepts fixed failure probability (Bernoulli)
-
-def blockRK_RLF(A, sol, b, blocks, N, c, p=0.3):
-    k = len(blocks)
-    x = c
-    x_list = [x]
-    errors = []
-    for j in range (1, N+1):
-        r = stats.bernoulli.rvs(p, size = 1);
-        i = randint(k)
-        if r[0] == 1:
-            x = x + np.linalg.pinv(A[blocks[i],:])@(b[blocks[i]] - A[blocks[i],:]@x)
-        errors.append(np.linalg.norm(x-sol))
-        x_list.append(x)
     return x, x_list, errors
 
 # Corrupted block RK with Constant Edge Communication Error
@@ -76,14 +57,14 @@ def blockRK_cece(A, sol, b, blocks, N, c, err, p=0.2): # where err is a constant
             m_t = b + err
         else:
             m_t = b
-        x = x + np.linalg.pinv(A[blocks[i],:])@(b[blocks[i]] - A[blocks[i],:]@x)
-        errors.append(np.linalg.norm(x-sol))
+        x = x + np.linalg.pinv(A[blocks[i],:])@(m_t[blocks[i]] - A[blocks[i],:]@x)
+        errors.append(np.linalg.norm(x-sol)**2)
         x_list.append(x)
     return x, x_list, errors
 
 # Corrupted block RK with Varying Edge Communication Error
 
-def blockRK_vece(A, sol, b, blocks, N, c, err, p=0.2): # where err is a distribution of possible error values
+def blockRK_vece(A, sol, b, blocks, N, c, err, p=1): # where err is a distribution of possible error values
     k = len(blocks)
     x = c
     x_list = [x]
@@ -93,13 +74,13 @@ def blockRK_vece(A, sol, b, blocks, N, c, err, p=0.2): # where err is a distribu
         r = stats.bernoulli.rvs(p, size = 1)
         i = randint(k)
         if r[0] == 1:
-            y = err.shape[1]
+            y = len(err)
             t = randint(y)
             m_t = b + err[t]
         else:
             m_t = b
-        x = x + np.linalg.pinv(A[blocks[i],:])@(b[blocks[i]] - A[blocks[i],:]@x)
-        errors.append(np.linalg.norm(x-sol))
+        x = x + np.linalg.pinv(A[blocks[i],:])@(m_t[blocks[i]] - A[blocks[i],:]@x)
+        errors.append(np.linalg.norm(x-sol)**2)
         x_list.append(x)
     return x, x_list, errors
 
@@ -127,8 +108,12 @@ def blocks_pnts(A, subgraphs):
 # Given a list of edges, returns a list of corresponding rows in incidence matrix
 def blocks_edge(A, subgraphs):
     blocks = []
+    max_count = len(subgraphs)
+    f = IntProgress(min=0, max=max_count)
+    display(f)
     for subgraph in subgraphs:
         blocks.append(find_subgraph_from_edges(A, subgraph))
+        f.value += 1
     return blocks
 
 # Turns a list of points into a list of edges
@@ -235,9 +220,11 @@ def error_plt(errors, G, blks, sol, N, rate='arbi'):
     else:
         print('rate not supported, using arbitrary blk rate')
         r = rate_arbi(G, blks)
+    print('rate calculated!')
     blabel = r'Predicted Bound'
     bound = [(r**i)*(errors[0]**2) for i in range(N)]
-    err = [errors[i]**2 for i in range(len(errors))]
+    print('bound calculated!')
+    err = errors
     plt.semilogy(range(N),err[0:N], 'b', linewidth=4, label = label)
     plt.semilogy(range(N), bound, 'r--', linewidth=4, label = blabel)
     plt.legend(prop={'size': 15})
@@ -247,7 +234,7 @@ def error_plt(errors, G, blks, sol, N, rate='arbi'):
     plt.yticks(fontsize=15)
     return bound, r, err
 
-def error_plt_ece(errors, A, G, blks, sol, N, err, t):
+def error_plt_ece(errors, G, A, blks, sol, N, err, t):
     k = len(blks)
     alp = alpha(blks, A)[0]
     beta = alpha(blks, A)[1]
@@ -263,7 +250,7 @@ def error_plt_ece(errors, A, G, blks, sol, N, err, t):
     else:
         mc = 0
     bound = [(rate**i)*(errors[0]**2)+mc for i in range(N+1)]
-    err = [errors[i]**2 for i in range(len(errors))]
+    err = errors
     plt.semilogy(range(np.shape(errors)[0]),err, 'b', linewidth=4, label = label)
     plt.semilogy(range(np.shape(bound)[0]), bound, 'r--', linewidth=4, label = r'Predicted Bound')
     plt.legend(prop={'size': 15})
@@ -283,10 +270,15 @@ def independent_edge_sets(G):
     # Take a copy of G
     H = G.copy()
     ies = []
+    max_count = 5000
+    f = IntProgress(min=0, max=max_count)
+    display(f)
     while len(H.edges())> 0:
         ieset = maximal_matching(H)
         ies.append(ieset)
         H.remove_edges_from(ieset)
+        f.value += 1
+    f.value = max_count
     return ies
 
 def blocks_from_ies(G, A):
@@ -397,7 +389,57 @@ def blockRK_path(A, G, sol, b, N, c, l):
         blk = path_blk(A, G, r, l)
         paths.append(blk)
         x = x + np.linalg.pinv(A[blk,:])@(b[blk] - A[blk,:]@x)
-        errors.append(np.linalg.norm(x-sol))
+        errors.append(np.linalg.norm(x-sol)**2)
+        x_list.append(np.asarray(x))
+        f.value += 1
+    f.value = max_count
+    return paths, x, x_list, errors
+
+def blockRK_cece_path(A, G, sol, b, N, c, l, err, p=1):
+    x = c
+    x_list = [x]
+    errors = [np.linalg.norm(x-sol)]
+    paths = []
+    max_count = N+1
+    f = IntProgress(min=0, max=max_count)
+    display(f)
+    for j in range(1, N+1):
+        r = stats.bernoulli.rvs(p, size = 1)
+        if r[0] == 1:
+            m_t = b + err
+        else:
+            m_t = b
+        r = randint(len(G.nodes))
+        blk = path_blk(A, G, r, l)
+        paths.append(blk)
+        x = x + np.linalg.pinv(A[blk,:])@(m_t[blk] - A[blk,:]@x)
+        errors.append(np.linalg.norm(x-sol)**2)
+        x_list.append(np.asarray(x))
+        f.value += 1
+    f.value = max_count
+    return paths, x, x_list, errors
+
+def blockRK_vece_path(A, G, sol, b, N, c, l, err, p=1):
+    x = c
+    x_list = [x]
+    errors = [np.linalg.norm(x-sol)]
+    paths = []
+    max_count = N+1
+    f = IntProgress(min=0, max=max_count)
+    display(f)
+    for j in range(1, N+1):
+        r = randint(len(G.nodes))
+        blk = path_blk(A, G, r, l)
+        paths.append(blk)
+        r0 = stats.bernoulli.rvs(p, size = 1)
+        if r0[0] == 1:
+            y = len(err)
+            t = randint(y)
+            m_t = b + err[t]
+        else:
+            m_t = b
+        x = x + np.linalg.pinv(A[blk,:])@(m_t[blk] - A[blk,:]@x)
+        errors.append(np.linalg.norm(x-sol)**2)
         x_list.append(np.asarray(x))
         f.value += 1
     f.value = max_count
