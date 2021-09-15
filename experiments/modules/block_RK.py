@@ -356,22 +356,22 @@ def find_edge(G, r):
         return
     else:
         a = neighbors[np.random.randint(0, len(neighbors))]
-        return a
+        return (r, a)
 
 def find_path(G, r, l):
-    path = [r]
+    path = [find_edge(G, r)]
     while len(path)<l:
-        nb = find_edge(G, path[len(path)-1])
+        nb = find_edge(G, path[len(path)-1][1])
         while nb in path:
             nb = find_edge(G, path[len(path)-1])
-        if nb == 'null':
+        if nb == False:
             return path
         path.append(nb)
     return path
 
 def path_blk(A, G, r, l):
     path = find_path(G, r, l)
-    blk = find_subgraph_from_edges(A, edges_from_pnts(path))
+    blk = find_subgraph_from_edges(A, path)
     return blk
 
 # block RK for paths
