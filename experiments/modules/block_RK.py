@@ -317,7 +317,7 @@ def largest_clique_bounded(cliques, bound):
 def clique_edge_cover(G, A, bound=None):
     H = G.copy()
     cliques_list = []
-    max_count = 5000
+    max_count = 500
     f = IntProgress(min=0, max=max_count)
     display(f)
     while len(H.edges)>0:
@@ -363,7 +363,7 @@ def find_path(G, r, l):
     while len(path)<l:
         nb = find_edge(G, path[len(path)-1][1])
         while nb in path:
-            nb = find_edge(G, path[len(path)-1])
+            nb = find_edge(G, path[len(path)-1][1])
         if nb == False:
             return path
         path.append(nb)
