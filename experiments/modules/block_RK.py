@@ -222,7 +222,7 @@ def error_plt(errors, G, blks, sol, N, rate='arbi'):
         r = rate_arbi(G, blks)
     print('rate calculated!')
     blabel = r'Predicted Bound'
-    bound = [(r**i)*(errors[0]**2) for i in range(N)]
+    bound = [(r**i)*(errors[0]) for i in range(N)]
     print('bound calculated!')
     err = errors
     plt.semilogy(range(N),err[0:N], 'b', linewidth=4, label = label)
