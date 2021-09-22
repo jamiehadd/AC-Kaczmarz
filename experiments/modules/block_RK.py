@@ -379,7 +379,7 @@ def path_blk(A, G, r, l):
 def blockRK_path(A, G, sol, b, N, c, l):
     x = c
     x_list = [x]
-    errors = [np.linalg.norm(x-sol)]
+    errors = [np.linalg.norm(x-sol)**2]
     paths = []
     max_count = N+1
     f = IntProgress(min=0, max=max_count)
