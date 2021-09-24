@@ -398,7 +398,7 @@ def blockRK_path(A, G, sol, b, N, c, l):
 def blockRK_cece_path(A, G, sol, b, N, c, l, err, p=1):
     x = c
     x_list = [x]
-    errors = [np.linalg.norm(x-sol)]
+    errors = [np.linalg.norm(x-sol)**2]
     paths = []
     max_count = N+1
     f = IntProgress(min=0, max=max_count)
@@ -422,7 +422,7 @@ def blockRK_cece_path(A, G, sol, b, N, c, l, err, p=1):
 def blockRK_vece_path(A, G, sol, b, N, c, l, err, p=1):
     x = c
     x_list = [x]
-    errors = [np.linalg.norm(x-sol)]
+    errors = [np.linalg.norm(x-sol)**2]
     paths = []
     max_count = N+1
     f = IntProgress(min=0, max=max_count)
