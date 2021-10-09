@@ -30,6 +30,7 @@ def blockRK(A, sol, b, blocks, N, c):
     x = c
     x_list = [x]
     errors = []
+    errors.append(np.linalg.norm(x-sol))
     for j in range (1, N+1):
         i = randint(k);
         x = x + np.linalg.pinv(A[blocks[i],:])@(b[blocks[i]] - A[blocks[i],:]@x)
